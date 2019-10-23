@@ -19,7 +19,7 @@ event bool WidgetInitialized(name WidgetName, name WidgetPath, GFxObject Widget)
 
 function ShowKillMessage ( PlayerReplicationInfo PRI1, PlayerReplicationInfo PRI2, optional bool bDeathMessage=false, optional Object OptionalObject)
 {
-	local GFxObject DataObject;
+    local GFxObject DataObject;
     local bool bHumanDeath;
     local string KilledName, KillerName, KilledIconpath, KillerIconPath;
     local string KillerTextColor, KilledTextColor;

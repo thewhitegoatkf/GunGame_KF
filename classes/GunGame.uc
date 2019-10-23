@@ -97,6 +97,7 @@ function Killed(Controller Killer, Controller KilledPlayer, Pawn KilledPawn, cla
 	local GGPlayerReplicationInfo GGPRI;
 	local class<KFDamageType> KFDT;
     local class<KFWeaponDefinition> KFWD; 
+    local sInterGunsList GGLIST;
 	//
 	GGPC = GGPlayerController(Killer);
 	GGPCK = GGPlayerController(KilledPlayer);
@@ -109,8 +110,9 @@ function Killed(Controller Killer, Controller KilledPlayer, Pawn KilledPawn, cla
 
 	if(GGPRI != none && GGPC != none && GGPC != GGPCK && KFWD != none)
 	{	//fixes dual weapons
-		if((KFWD.Default.WeaponClassPath == LoadedGunsList[GGPRI.GunLevel].classPath) || //check if killed by level weapon
-		(LoadedGunsList[GGPRI.GunLevel].weaponSingleClassPath != "" && LoadedGunsList[GGPRI.GunLevel].weaponSingleClassPath == KFWD.Default.WeaponClassPath)) //check if it was 
+		GGLIST = LoadedGunsList[GetGGLevel(GGPRI)];
+		if((KFWD.Default.WeaponClassPath == GGLIST.classPath) || //check if killed by level weapon
+		(GGLIST.weaponSingleClassPath != "" && GGLIST.weaponSingleClassPath == KFWD.Default.WeaponClassPath)) //check if it was 
 		{
 			`log("LevelUp: Player" @ GGPRI.PlayerName @ "To:" @ GGPRI.GunLevel);
 			GGPRI.SetGunLevel(GGPRI.GunLevel+1);
@@ -133,6 +135,12 @@ function Killed(Controller Killer, Controller KilledPlayer, Pawn KilledPawn, cla
 		GGPCK.ShowRespawnMessage();
 }
 
+function int GetGGLevel(GGPlayerReplicationInfo GGPRI)
+{
+	return Clamp(GGPRI.GunLevel, 0, LoadedGunsList.length);
+}
+
+
 function LevelUp(GGPlayerController GGPC, GGPlayerReplicationInfo GGPRI)
 {
 	local KFPawn KFP;
@@ -143,7 +151,7 @@ function LevelUp(GGPlayerController GGPC, GGPlayerReplicationInfo GGPRI)
 	
 	ClearInventory(KFP);
 	//KFP.InvManager.DiscardInventory();
-	AddWeapon(KFP, LoadedGunsList[GGPRI.GunLevel].weaponClass);
+	AddWeapon(KFP, LoadedGunsList[GetGGLevel(GGPRI)].weaponClass);
 	InitWeaponProperties(KFP);
 }
 
@@ -212,7 +220,7 @@ event AddDefaultInventory(Pawn P) //
 	if(GGPRI == none)
 		return;
 
-	AddWeapon(KFPawn(P), LoadedGunsList[GGPRI.GunLevel].weaponClass, true);
+	AddWeapon(KFPawn(P), LoadedGunsList[GetGGLevel(GGPRI)].weaponClass, true);
 	P.AddDefaultInventory();
 	InitWeaponProperties(P);
 }
