@@ -115,7 +115,7 @@ function Killed(Controller Killer, Controller KilledPlayer, Pawn KilledPawn, cla
 		(GGLIST.weaponSingleClassPath != "" && GGLIST.weaponSingleClassPath == KFWD.Default.WeaponClassPath)) //check if it was 
 		{
 			`log("LevelUp: Player" @ GGPRI.PlayerName @ "To:" @ GGPRI.GunLevel);
-			GGPRI.SetGunLevel(Clamp(GGPRI.GunLevel+1, 0, LoadedGunsList.Length));
+			GGPRI.SetGunLevel(GGPRI.GunLevel+1);
 			if(GGPRI.GunLevel > GoalScore)
 			{
 				EndOfMatchWinner(GGPC);
