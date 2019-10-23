@@ -5,11 +5,10 @@ exec function Jump()
 	local DMPlayerController DMPC;
 
 	Super.Jump();
-	
 
 	if(Pawn != none)
 		return;
-		
+
 	DMPC = DMPlayerController(Outer);
 	if(DMPC != none && CanRestartPlayer())
 	{

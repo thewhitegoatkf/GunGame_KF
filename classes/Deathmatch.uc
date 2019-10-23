@@ -1,4 +1,4 @@
-class Deathmatch extends KFGameInfo_Survival dependson(KFLocalMessage_Priority)
+class Deathmatch extends KFGameInfo
 config(Deathmatch);
 
 const DEF_GOALSCORE = 25; //Its not used in the default game 
@@ -15,11 +15,6 @@ event InitGame( string Options, out string ErrorMessage )
 {
 	Super.InitGame( Options, ErrorMessage );
 	`log("Deathmatch initialized");
-}
-
-function ResetAllPickups()
-{
-	Super(KFGameInfo).ResetAllPickups();
 }
 
 event PreBeginPlay()
@@ -137,19 +132,19 @@ function EndOfMatchWinner(KFPlayerController winnerController)
 	local DMPlayerController KFPC;
 	lastWinner = winnerController;
 	//`AnalyticsLog(("match_end", None, "#"$WaveNum, "#"$(bVictory ? "1" : "0"), "#"$GameConductor.ZedVisibleAverageLifespan));
-	SetTimer(EndCinematicDelay, false, nameof(SetWonGameCamera));
+	SetTimer(4, false, nameof(SetWonGameCamera));
 
 	foreach WorldInfo.AllControllers(class'DMPlayerController', KFPC)
 	{
 		if(KFPC == winnerController)
 		{
-			KFPC.ClientWonGame( WorldInfo.GetMapName( true ), GameDifficulty, GameLength,	IsMultiplayerGame() );
+			KFPC.ClientWonGame( WorldInfo.GetMapName(true), GameDifficulty, GameLength, IsMultiplayerGame() );
 			KFPC.ShowPriorityMessage("You won the game", "Congrats", 4);
 			//BroadcastLocalizedToController(KFPC, class'KFLocalMessage_Priority', GMT_MatchWon);
 		}
 		else
 		{
-			KFPC.ClientGameOver( WorldInfo.GetMapName(true), GameDifficulty, GameLength, IsMultiplayerGame(), WaveNum );
+			KFPC.ClientGameOver( WorldInfo.GetMapName(true), GameDifficulty, GameLength, IsMultiplayerGame(), 0 );
 			if(winnerController != none)
 				KFPC.ShowPriorityMessage(winnerController.PlayerReplicationInfo.PlayerName, "Won the game!", 4);
 			else
@@ -176,24 +171,6 @@ function SetWonGameCamera()
 function BroadcastLocalizedToController( PlayerController P, class<LocalMessage> Message, optional int Switch, optional PlayerReplicationInfo RelatedPRI_1, optional PlayerReplicationInfo RelatedPRI_2, optional Object OptionalObject )
 {
 	BroadcastHandler.BroadcastLocalized(Self, P, Message, Switch, RelatedPRI_1, RelatedPRI_2, OptionalObject);
-}
-
-
-// Disable wave functionality 
-State PlayingWave
-{
-	function BeginState( Name PreviousStateName )
-	{
-		if ( AllowBalanceLogging() )
-		{
-			LogPlayersDosh(GBE_WaveStart);
-		}
-	}
-
-	function bool IsWaveActive()
-	{
-		return false;
-	}
 }
 
 //** Returns false if this is near another player or in-use spawn point 
@@ -275,7 +252,14 @@ function float RatePlayerStart(PlayerStart P, byte Team, Controller Player) //LO
 	return Rating;
 }
 
+
 /** returns whether the given Controller StartSpot property should be used as the spawn location for its Pawn */
+
+function byte IsMultiplayerGame()
+{
+	return (WorldInfo.NetMode != NM_Standalone && GetNumPlayers()  > 1) ? 1 : 0;
+}
+
 
 DefaultProperties
 {
