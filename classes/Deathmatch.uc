@@ -1,4 +1,4 @@
-class Deathmatch extends KFGameInfo_Survival
+class Deathmatch extends KFGameInfo
 config(Deathmatch);
 
 const DEF_GOALSCORE = 25; //Its not used in the default game 
@@ -15,11 +15,6 @@ event InitGame( string Options, out string ErrorMessage )
 {
 	Super.InitGame( Options, ErrorMessage );
 	`log("Deathmatch initialized");
-}
-
-function ResetAllPickups()
-{
-	Super(KFGameInfo).ResetAllPickups();
 }
 
 event PreBeginPlay()
@@ -107,10 +102,10 @@ function SetGoalScore(int Score)
 		MyDMGRI.GoalScore = GoalScore;
 }
 
-function CheckWaveEnd( optional bool bForceWaveEnd = false )
-{
+// function CheckWaveEnd( optional bool bForceWaveEnd = false )
+// {
 
-}
+// }
 
 static function bool GametypeChecksDifficulty()
 {
@@ -137,19 +132,19 @@ function EndOfMatchWinner(KFPlayerController winnerController)
 	local DMPlayerController KFPC;
 	lastWinner = winnerController;
 	//`AnalyticsLog(("match_end", None, "#"$WaveNum, "#"$(bVictory ? "1" : "0"), "#"$GameConductor.ZedVisibleAverageLifespan));
-	SetTimer(EndCinematicDelay, false, nameof(SetWonGameCamera));
+	SetTimer(4, false, nameof(SetWonGameCamera));
 
 	foreach WorldInfo.AllControllers(class'DMPlayerController', KFPC)
 	{
 		if(KFPC == winnerController)
 		{
-			KFPC.ClientWonGame( WorldInfo.GetMapName( true ), GameDifficulty, GameLength,	IsMultiplayerGame() );
+			KFPC.ClientWonGame( WorldInfo.GetMapName(true), GameDifficulty, GameLength, IsMultiplayerGame() );
 			KFPC.ShowPriorityMessage("You won the game", "Congrats", 4);
 			//BroadcastLocalizedToController(KFPC, class'KFLocalMessage_Priority', GMT_MatchWon);
 		}
 		else
 		{
-			KFPC.ClientGameOver( WorldInfo.GetMapName(true), GameDifficulty, GameLength, IsMultiplayerGame(), WaveNum );
+			KFPC.ClientGameOver( WorldInfo.GetMapName(true), GameDifficulty, GameLength, IsMultiplayerGame(), 0 );
 			if(winnerController != none)
 				KFPC.ShowPriorityMessage(winnerController.PlayerReplicationInfo.PlayerName, "Won the game!", 4);
 			else
@@ -173,27 +168,199 @@ function SetWonGameCamera()
 	}
 }
 
+/*********************************************************************************************
+ * state MatchEnded
+ *********************************************************************************************/
+
+ State MatchEnded
+ {
+ 	function BeginState( Name PreviousStateName )
+	{
+		if (WorldInfo.NetMode == NM_DedicatedServer)
+		{
+			`REMOVEMESOON_ZombieServerLog("KFGameInfo_Survival:MatchEnded.BeginState - PreviousStateName: "$PreviousStateName);
+		}
+
+		`log("KFGameInfo_Survival - MatchEnded.BeginState - AARDisplayDelay:" @ 15);
+
+		MyKFGRI.EndGame();
+		MyKFGRI.bWaitingForAAR = true; //@HSL - JRO - 6/15/2016 - Make sure we're still at full speed before the end of game menu shows up
+
+		if ( AllowBalanceLogging() )
+		{
+			LogPlayersKillCount();
+		}
+
+		SetTimer(1.f, false, nameof(ProcessAwards));
+		SetTimer(15, false, nameof(ShowPostGameMenu));
+	}
+
+	event Timer()
+	{
+		if (WorldInfo.NetMode == NM_DedicatedServer)
+		{
+			`REMOVEMESOON_ZombieServerLog("KFGameInfo_Survival:MatchEnded.Timer - NumPlayers: "$NumPlayers);
+		}
+
+		global.Timer();
+		if (NumPlayers == 0)
+		{
+			RestartGame();
+		}
+	}
+ }
+
+function EndOfMatch(bool bVictory)
+{
+	local KFPlayerController KFPC;
+
+	if (WorldInfo.NetMode == NM_DedicatedServer)
+	{
+		`REMOVEMESOON_ZombieServerLog("KFGameInfo_Survival.EndOfMatch - bVictory: "$bVictory);
+	}
+
+	`AnalyticsLog(("match_end", None, "#"$0, "#"$(bVictory ? "1" : "0"), "#"$GameConductor.ZedVisibleAverageLifespan));
+
+	if(bVictory)
+	{
+		SetTimer(4, false, nameof(SetWonGameCamera));
+
+		foreach WorldInfo.AllControllers(class'KFPlayerController', KFPC)
+		{
+			KFPC.ClientWonGame( WorldInfo.GetMapName( true ), GameDifficulty, GameLength,	IsMultiplayerGame() );
+		}
+
+		BroadcastLocalizedMessage(class'KFLocalMessage_Priority', GMT_MatchWon);
+	}
+	else
+	{
+		BroadcastLocalizedMessage(class'KFLocalMessage_Priority', GMT_MatchLost);
+	}
+
+    foreach WorldInfo.AllControllers(class'KFPlayerController', KFPC)
+	{
+		KFPC.ClientGameOver( WorldInfo.GetMapName(true), GameDifficulty, GameLength, IsMultiplayerGame(), 0 );
+	}
+
+	GotoState('MatchEnded');
+}
+
+//Get Top voted map
+function string GetNextMap()
+{
+	local KFGameReplicationInfo KFGRI;
+	local int NextMapIndex;
+
+	KFGRI = KFGameReplicationInfo(WorldInfo.GRI);
+	if( KFGRI != none )
+	{
+		NextMapIndex = KFGRI.VoteCollector.GetNextMap();
+	}
+
+	if( NextMapIndex != INDEX_NONE )
+	{
+		if(WorldInfo.NetMode == NM_Standalone)
+		{
+			return KFGRI.VoteCollector.Maplist[NextMapIndex];
+		}
+		else
+		{
+			return GameMapCycles[ActiveMapCycle].Maps[NextMapIndex];
+		}
+
+	}
+
+	return super.GetNextMap();
+}
+
+function ShowPostGameMenu()
+{
+	local KFGameReplicationInfo KFGRI;
+
+	`log("KFGameInfo_Survival - ShowPostGameMenu");
+
+	MyKFGRI.bWaitingForAAR = false; //@HSL - JRO - 6/15/2016 - Make sure we're still at full speed before the end of game menu shows up
+
+	bEnableDeadToVOIP=true; //Being dead at this point is irrelevant.  Allow players to talk about AAR -ZG
+	KFGRI = KFGameReplicationInfo(WorldInfo.GRI);
+
+	if(KFGRI != none)
+	{
+		KFGRI.OnOpenAfterActionReport( GetEndOfMatchTime() );
+	}
+
+	//class'EphemeralMatchStats'.Static.SendMapOptionsAndOpenAARMenu();
+	SendMapOptionsAndOpenAARMenu();
+
+	UpdateCurrentMapVoteTime( GetEndOfMatchTime(), true);
+
+	WorldInfo.TWPushLogs();
+}
+
+static function SendMapOptionsAndOpenAARMenu()
+{
+	local WorldInfo WI;
+	local KFPlayerController KFPC;
+	local KFPlayerReplicationInfo KFPRI;
+	local KFGameInfo KFGI;
+	local int i;
+
+	WI = Class'WorldInfo'.Static.GetWorldInfo();
+
+	KFGI = KFGameInfo(WI.Game);
+
+	foreach WI.AllControllers(class'KFPlayerController', KFPC)
+	{
+		if(WI.NetMode != NM_StandAlone)
+		{
+			KFPRI = KFPlayerReplicationInfo(KFPC.PlayerReplicationInfo);
+			for (i = 0; i < KFGI.GameMapCycles[KFGI.ActiveMapCycle].Maps.length; i++)
+		    {
+				if(KFPRI != none)
+				{
+					KFPRI.RecieveAARMapOption(KFGI.GameMapCycles[KFGI.ActiveMapCycle].Maps[i]);
+				}
+			}
+		}
+		KFPC.ClientShowPostGameMenu();
+	}
+}
+
+function float GetEndOfMatchTime()
+{
+	return MapVoteDuration;
+}
+
+function ProcessAwards()
+{
+	class'EphemeralMatchStats'.Static.ProcessPostGameStats();
+}
+
+function UpdateCurrentMapVoteTime(byte NewTime, optional bool bStartTime)
+{
+	if(WorldInfo.GRI.RemainingTime > NewTime || bStartTime)
+	{
+		ClearTimer(nameof(RestartGame));
+		SetTimer(NewTime, false, nameof(TryRestartGame));
+		WorldInfo.GRI.RemainingMinute = NewTime;
+		WorldInfo.GRI.RemainingTime  = NewTime;
+	}
+
+	//in the case that the server has a 0 for the time we still want to be able to trigger a server travel.
+	if(NewTime <= 0 || WorldInfo.GRI.RemainingTime <= 0)
+	{
+		TryRestartGame();
+	}
+}
+
+function TryRestartGame()
+{
+	RestartGame();
+}
+
 function BroadcastLocalizedToController( PlayerController P, class<LocalMessage> Message, optional int Switch, optional PlayerReplicationInfo RelatedPRI_1, optional PlayerReplicationInfo RelatedPRI_2, optional Object OptionalObject )
 {
 	BroadcastHandler.BroadcastLocalized(Self, P, Message, Switch, RelatedPRI_1, RelatedPRI_2, OptionalObject);
-}
-
-
-// Disable wave functionality 
-State PlayingWave
-{
-	function BeginState( Name PreviousStateName )
-	{
-		if ( AllowBalanceLogging() )
-		{
-			LogPlayersDosh(GBE_WaveStart);
-		}
-	}
-
-	function bool IsWaveActive()
-	{
-		return false;
-	}
 }
 
 //** Returns false if this is near another player or in-use spawn point 
@@ -274,6 +441,13 @@ function float RatePlayerStart(PlayerStart P, byte Team, Controller Player) //LO
 		 Rating += 10.f; // Higher than disabled, but lower than default
 	}
 	return Rating;
+}
+
+/** returns whether the given Controller StartSpot property should be used as the spawn location for its Pawn */
+
+function byte IsMultiplayerGame()
+{
+	return (WorldInfo.NetMode != NM_Standalone && GetNumPlayers()  > 1) ? 1 : 0;
 }
 
 DefaultProperties
