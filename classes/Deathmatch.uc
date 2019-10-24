@@ -289,11 +289,41 @@ function ShowPostGameMenu()
 		KFGRI.OnOpenAfterActionReport( GetEndOfMatchTime() );
 	}
 
-	class'EphemeralMatchStats'.Static.SendMapOptionsAndOpenAARMenu();
+	//class'EphemeralMatchStats'.Static.SendMapOptionsAndOpenAARMenu();
+	SendMapOptionsAndOpenAARMenu();
 
 	UpdateCurrentMapVoteTime( GetEndOfMatchTime(), true);
 
 	WorldInfo.TWPushLogs();
+}
+
+static function SendMapOptionsAndOpenAARMenu()
+{
+	local WorldInfo WI;
+	local KFPlayerController KFPC;
+	local KFPlayerReplicationInfo KFPRI;
+	local KFGameInfo KFGI;
+	local int i;
+
+	WI = Class'WorldInfo'.Static.GetWorldInfo();
+
+	KFGI = KFGameInfo(WI.Game);
+
+	foreach WI.AllControllers(class'KFPlayerController', KFPC)
+	{
+		if(WI.NetMode != NM_StandAlone)
+		{
+			KFPRI = KFPlayerReplicationInfo(KFPC.PlayerReplicationInfo);
+			for (i = 0; i < KFGI.GameMapCycles[KFGI.ActiveMapCycle].Maps.length; i++)
+		    {
+				if(KFPRI != none)
+				{
+					KFPRI.RecieveAARMapOption(KFGI.GameMapCycles[KFGI.ActiveMapCycle].Maps[i]);
+				}
+			}
+		}
+		KFPC.ClientShowPostGameMenu();
+	}
 }
 
 function float GetEndOfMatchTime()
