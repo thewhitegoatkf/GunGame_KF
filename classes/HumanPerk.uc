@@ -11,4 +11,3 @@ DefaultProperties
 {
 	PerkSkills.Empty()
 }
-

@@ -27,6 +27,7 @@ function PlayerReplicationInfo Duplicate()
 function CopyProperties(PlayerReplicationInfo PRI)
 {
 	local GGPlayerReplicationInfo NewKFPRI;
+	
 	NewKFPRI = GGPlayerReplicationInfo(PRI);
 	NewKFPRI.GunLevel = GunLevel;
 	Super.CopyProperties(PRI);

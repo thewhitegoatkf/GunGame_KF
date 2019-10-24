@@ -98,7 +98,7 @@ function Killed(Controller Killer, Controller KilledPlayer, Pawn KilledPawn, cla
 	local class<KFDamageType> KFDT;
     local class<KFWeaponDefinition> KFWD; 
     local sInterGunsList GGLIST;
-	//
+	
 	GGPC = GGPlayerController(Killer);
 	GGPCK = GGPlayerController(KilledPlayer);
 	GGPRI = GGPlayerReplicationInfo(Killer.PlayerReplicationInfo);
@@ -109,10 +109,10 @@ function Killed(Controller Killer, Controller KilledPlayer, Pawn KilledPawn, cla
 		KFWD = KFDT.Default.WeaponDef;
 
 	if(GGPRI != none && GGPC != none && GGPC != GGPCK && KFWD != none)
-	{	//fixes dual weapons
+	{
 		GGLIST = LoadedGunsList[GetGGLevel(GGPRI)];
 		if((KFWD.Default.WeaponClassPath == GGLIST.classPath) || //check if killed by level weapon
-		(GGLIST.weaponSingleClassPath != "" && GGLIST.weaponSingleClassPath == KFWD.Default.WeaponClassPath)) //check if it was 
+		(GGLIST.weaponSingleClassPath != "" && GGLIST.weaponSingleClassPath == KFWD.Default.WeaponClassPath)) //check if it was dual weapon
 		{
 			`log("LevelUp: Player" @ GGPRI.PlayerName @ "To:" @ GGPRI.GunLevel);
 			GGPRI.SetGunLevel(GGPRI.GunLevel+1);
@@ -121,12 +121,12 @@ function Killed(Controller Killer, Controller KilledPlayer, Pawn KilledPawn, cla
 				EndOfMatchWinner(GGPC);
 				return;
 			}
+
 			if(LastTopScore < GGPRI.GunLevel)
 			{
 				LastTopScore = GGPRI.GunLevel;
 				MyDMGRI.TopScore = LastTopScore;
 			}
-			
 			LevelUp(GGPC, GGPRI);
 		}
 	}
@@ -143,6 +143,7 @@ function int GetGGLevel(GGPlayerReplicationInfo GGPRI)
 function LevelUp(GGPlayerController GGPC, GGPlayerReplicationInfo GGPRI)
 {
 	local KFPawn KFP;
+	
 	KFP = KFPawn(GGPC.Pawn);
 
 	if(KFP == none || !KFP.IsAliveAndWell())
@@ -166,6 +167,7 @@ function DiscardInventory( Pawn Other, optional controller Killer )
 function ClearInventory(Pawn Other)
 {
 	local Inventory inv;
+
 	if ( Other.InvManager != None )
 	{
 		ForEach Other.InvManager.InventoryActors(class'Inventory', inv)
@@ -214,6 +216,7 @@ function InitWeaponProperties(Pawn P, optional KFWeapon weap)
 event AddDefaultInventory(Pawn P) //
 {
 	local GGPlayerReplicationInfo GGPRI;
+
 	GGPRI = GGPlayerReplicationInfo(P.Controller.PlayerReplicationInfo);
 
 	if(GGPRI == none)

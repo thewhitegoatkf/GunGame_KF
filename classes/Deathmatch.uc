@@ -37,7 +37,6 @@ function StartMatch()
 	lastWinner = none;
 	LastTopScore = 0;
 	Super.StartMatch();
-	ResetAllPickups();
 }
 
 function bool MajorityPlayersReady()
@@ -66,8 +65,9 @@ function Killed(Controller Killer, Controller KilledPlayer, Pawn KilledPawn, cla
 	local KFPlayerController KFPC,KFPCK;
 	local KFPlayerReplicationInfo KFPRI;
 	local DMPlayerController DMPCK;
+
 	Super.Killed(Killer,KilledPlayer,KilledPawn,damageType);
-	//
+	
 	KFPC = KFPlayerController(Killer);
 	KFPCK = KFPlayerController(KilledPlayer);
 	KFPRI = KFPlayerReplicationInfo(Killer.PlayerReplicationInfo);
@@ -120,29 +120,25 @@ static function bool GetShouldShowLength()
 function EndOfMatchWinner(KFPlayerController winnerController)
 {
 	local DMPlayerController KFPC;
+	
 	lastWinner = winnerController;
-	//`AnalyticsLog(("match_end", None, "#"$WaveNum, "#"$(bVictory ? "1" : "0"), "#"$GameConductor.ZedVisibleAverageLifespan));
-	SetTimer(4, false, nameof(SetWonGameCamera));
-
+	//TODO:Add sounds for cooler effect
 	foreach WorldInfo.AllControllers(class'DMPlayerController', KFPC)
 	{
 		if(KFPC == winnerController)
 		{
-			KFPC.ClientWonGame( WorldInfo.GetMapName(true), GameDifficulty, GameLength, IsMultiplayerGame() );
+			KFPC.ClientWonGame( WorldInfo.GetMapName(true), GameDifficulty, GameLength, IsMultiplayerGame());
 			KFPC.ShowPriorityMessage("You won the game", "Congrats", 4);
-			//BroadcastLocalizedToController(KFPC, class'KFLocalMessage_Priority', GMT_MatchWon);
 		}
 		else
 		{
-			KFPC.ClientGameOver( WorldInfo.GetMapName(true), GameDifficulty, GameLength, IsMultiplayerGame(), 0 );
+			KFPC.ClientGameOver( WorldInfo.GetMapName(true), GameDifficulty, GameLength, IsMultiplayerGame(), 0);
 			if(winnerController != none)
 				KFPC.ShowPriorityMessage(winnerController.PlayerReplicationInfo.PlayerName, "Won the game!", 4);
 			else
 				KFPC.ShowPriorityMessage("You have lost!", "it's a shame really", 4);
-			//BroadcastLocalizedToController(KFPC, class'KFLocalMessage_Priority', GMT_MatchLost);
 		}
 	}
-	//SetZedsToVictoryState();
 	GotoState('MatchEnded');
 }
 
@@ -181,6 +177,7 @@ function SetWonGameCamera()
 			LogPlayersKillCount();
 		}
 
+		SetTimer(4, false, nameof(SetWonGameCamera));
 		SetTimer(1.f, false, nameof(ProcessAwards));
 		SetTimer(15, false, nameof(ShowPostGameMenu));
 	}
@@ -199,41 +196,6 @@ function SetWonGameCamera()
 		}
 	}
  }
-
-function EndOfMatch(bool bVictory)
-{
-	local KFPlayerController KFPC;
-
-	if (WorldInfo.NetMode == NM_DedicatedServer)
-	{
-		`REMOVEMESOON_ZombieServerLog("KFGameInfo_Survival.EndOfMatch - bVictory: "$bVictory);
-	}
-
-	`AnalyticsLog(("match_end", None, "#"$0, "#"$(bVictory ? "1" : "0"), "#"$GameConductor.ZedVisibleAverageLifespan));
-
-	if(bVictory)
-	{
-		SetTimer(4, false, nameof(SetWonGameCamera));
-
-		foreach WorldInfo.AllControllers(class'KFPlayerController', KFPC)
-		{
-			KFPC.ClientWonGame( WorldInfo.GetMapName( true ), GameDifficulty, GameLength,	IsMultiplayerGame() );
-		}
-
-		BroadcastLocalizedMessage(class'KFLocalMessage_Priority', GMT_MatchWon);
-	}
-	else
-	{
-		BroadcastLocalizedMessage(class'KFLocalMessage_Priority', GMT_MatchLost);
-	}
-
-    foreach WorldInfo.AllControllers(class'KFPlayerController', KFPC)
-	{
-		KFPC.ClientGameOver( WorldInfo.GetMapName(true), GameDifficulty, GameLength, IsMultiplayerGame(), 0 );
-	}
-
-	GotoState('MatchEnded');
-}
 
 //Get Top voted map
 function string GetNextMap()
@@ -279,11 +241,8 @@ function ShowPostGameMenu()
 		KFGRI.OnOpenAfterActionReport( GetEndOfMatchTime() );
 	}
 
-	//class'EphemeralMatchStats'.Static.SendMapOptionsAndOpenAARMenu();
 	SendMapOptionsAndOpenAARMenu();
-
 	UpdateCurrentMapVoteTime( GetEndOfMatchTime(), true);
-
 	WorldInfo.TWPushLogs();
 }
 
@@ -348,11 +307,6 @@ function TryRestartGame()
 	RestartGame();
 }
 
-function BroadcastLocalizedToController( PlayerController P, class<LocalMessage> Message, optional int Switch, optional PlayerReplicationInfo RelatedPRI_1, optional PlayerReplicationInfo RelatedPRI_2, optional Object OptionalObject )
-{
-	BroadcastHandler.BroadcastLocalized(Self, P, Message, Switch, RelatedPRI_1, RelatedPRI_2, OptionalObject);
-}
-
 //** Returns false if this is near another player or in-use spawn point 
 static function bool CheckSpawnProximity( NavigationPoint P, Controller Player, byte TeamNum, optional bool bCustomizationPoint )
 {
@@ -391,7 +345,6 @@ static function bool CheckSpawnProximity( NavigationPoint P, Controller Player, 
 					continue;
 				}
 			}
-			//`log("Spawn Distance:"@VSizeSq(PC.Pawn.Location - P.Location)@"Sqared Colission:"@Square(2.1 * PC.Pawn.GetCollisionRadius()));
 			
 			if( VSizeSq(PC.Pawn.Location - P.Location) < Square(4 * PC.Pawn.GetCollisionRadius()) )
 			 	return false;
@@ -414,8 +367,6 @@ function bool ShouldSpawnAtStartSpot(Controller Player)
 function float RatePlayerStart(PlayerStart P, byte Team, Controller Player) //LOOPED FOREACH NAVPOINT
 {
 	local float Rating;
-
-	//Rating = Super(KFGameInfo).RatePlayerStart(P, Team, Player);
 
 	if (P.TeamIndex == Team)
 		Rating += 15.f;
