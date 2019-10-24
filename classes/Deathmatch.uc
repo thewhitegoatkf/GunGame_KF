@@ -1,4 +1,4 @@
-class Deathmatch extends KFGameInfo_Survival dependson(KFLocalMessage_Priority)
+class Deathmatch extends KFGameInfo_Survival
 config(Deathmatch);
 
 const DEF_GOALSCORE = 25; //Its not used in the default game 
@@ -168,8 +168,8 @@ function SetWonGameCamera()
 	foreach WorldInfo.AllControllers( class'KFPlayerController', KFPC )
 	{
 		KFPC.ServerCamera( 'ThirdPerson' );
-		// if(lastWinner != none && lastWinner.Pawn != none && KFPC != lastWinner)
-		// 	KFPC.ClientSetViewTarget(lastWinner.Pawn);
+		if(lastWinner != none && lastWinner.Pawn != none && KFPC != lastWinner)
+			KFPC.ClientSetViewTarget(lastWinner.Pawn);
 	}
 }
 
@@ -263,12 +263,13 @@ function float RatePlayerStart(PlayerStart P, byte Team, Controller Player) //LO
 	if (P.TeamIndex == Team)
 		Rating += 15.f;
 	
-	// If (P.bEnabled) 
-	// 	Rating += 4.f;
+	if(Player == none)
+		return Rating;
+
 	if(Player.StartSpot != none && Player.StartSpot != P)
 		Rating += 4.f;
 
-	if ( Player.StartSpot != P && CheckSpawnProximity( P, Player, Team ) )
+	if ( CheckSpawnProximity( P, Player, Team ) )
 	{
 		 Rating += 10.f; // Higher than disabled, but lower than default
 	}
@@ -276,6 +277,81 @@ function float RatePlayerStart(PlayerStart P, byte Team, Controller Player) //LO
 }
 
 /** returns whether the given Controller StartSpot property should be used as the spawn location for its Pawn */
+
+function PlayerStart ChoosePlayerStart( Controller Player, optional byte InTeam )
+{
+	local PlayerStart P, BestStart;
+	local float BestRating, NewRating;
+	local byte Team;
+
+	// use InTeam if player doesn't have a team yet
+	Team = ( (Player != None) && (Player.PlayerReplicationInfo != None) && (Player.PlayerReplicationInfo.Team != None) )
+			? byte(Player.PlayerReplicationInfo.Team.TeamIndex)
+			: InTeam;
+
+	// Find best playerstart
+	foreach WorldInfo.AllNavigationPoints(class'PlayerStart', P)
+	{
+		NewRating = RatePlayerStart(P,Team,Player);
+		if ( NewRating > BestRating )
+		{
+			BestRating = NewRating;
+			BestStart = P;
+		}
+	}
+	return BestStart;
+}
+
+function NavigationPoint FindPlayerStart( Controller Player, optional byte InTeam, optional string IncomingName )
+{
+	local NavigationPoint N, BestStart;
+	local Teleporter Tel;
+
+	// allow GameRulesModifiers to override playerstart selection
+	if (BaseMutator != None)
+	{
+		N = BaseMutator.FindPlayerStart(Player, InTeam, IncomingName);
+		if (N != None)
+		{
+			return N;
+		}
+	}
+
+	// if incoming start is specified, then just use it
+	if( incomingName!="" )
+	{
+		ForEach WorldInfo.AllNavigationPoints( class 'Teleporter', Tel )
+			if( string(Tel.Tag)~=incomingName )
+				return Tel;
+	}
+
+	// always pick StartSpot at start of match
+`if(`__TW_)
+	// Allow ShouldSpawnAtStartSpot() to handle rating - see KFGameInfo
+	if ( ShouldSpawnAtStartSpot(Player) )
+`else
+	if ( ShouldSpawnAtStartSpot(Player) &&
+		(PlayerStart(Player.StartSpot) == None || RatePlayerStart(PlayerStart(Player.StartSpot), InTeam, Player) >= 0.0) )
+`endif
+	{
+		return Player.StartSpot;
+	}
+
+	BestStart = ChoosePlayerStart(Player, InTeam);
+
+	if ( (BestStart == None) && (Player == None) )
+	{
+		// no playerstart found, so pick any NavigationPoint to keep player from failing to enter game
+		`log("Warning - PATHS NOT DEFINED or NO PLAYERSTART with positive rating");
+		ForEach AllActors( class 'NavigationPoint', N )
+		{
+			BestStart = N;
+			break;
+		}
+	}
+	return BestStart;
+}
+
 
 DefaultProperties
 {
