@@ -102,11 +102,6 @@ function SetGoalScore(int Score)
 		MyDMGRI.GoalScore = GoalScore;
 }
 
-// function CheckWaveEnd( optional bool bForceWaveEnd = false )
-// {
-
-// }
-
 static function bool GametypeChecksDifficulty()
 {
     return false;
@@ -120,11 +115,6 @@ static function bool GametypeChecksWaveLength()
 static function bool GetShouldShowLength()
 {
 	return false;
-}
-
-function CheckZedTimeOnKill(Controller Killer, Controller KilledPlayer, Pawn KilledPawn, class<DamageType> DamageType)
-{
-
 }
 
 function EndOfMatchWinner(KFPlayerController winnerController)
