@@ -7,9 +7,8 @@ var int LastTopScore;
 var DMGameReplicationInfo MyDMGRI;
 var KFPlayerController lastWinner;
 
-var float warmupTime;
-var float timeLeftForWarmup;
-var bool bWarmupRound;
+var config int WarmupTime;
+var config bool bEnableWarmup;
 
 event InitGame( string Options, out string ErrorMessage )
 {
@@ -21,8 +20,9 @@ event PreBeginPlay()
 {
 	Super.PreBeginPlay();
 	ReadyUpDelay = 20;
-
+	
 	MyDMGRI = DMGameReplicationInfo(WorldInfo.GRI);
+	MyDMGRI.WarmupTime = WarmupTime;
 	SetGoalScore(GoalScore <= 0 ? DEF_GOALSCORE : GoalScore);
 }
 
@@ -37,6 +37,24 @@ function StartMatch()
 	lastWinner = none;
 	LastTopScore = 0;
 	Super.StartMatch();
+
+	if(bEnableWarmup)
+		StartWarmupRound();
+}
+
+function StartWarmupRound()
+{
+	MyDMGRI.bWarmupRound = true;
+	MyDMGRI.NotifyWarmupRoundStarted();
+	SetTimer(WarmupTime, false, nameof(OnWarmupEnd));
+}
+
+function OnWarmupEnd()
+{
+	MyDMGRI.bWarmupRound = false;
+	ResetLevel();
+	//StartHumans();
+	//TODO:Additional fixes needed 
 }
 
 function bool MajorityPlayersReady()
@@ -46,6 +64,8 @@ function bool MajorityPlayersReady()
 
 function bool CheckAllPlayersReady()
 {
+	if(bEnableWarmup)
+		return true;
 	return NumPlayers >= MaxPlayersAllowed*0.25 ? Super.CheckAllPlayersReady() : false;
 }
 
@@ -142,18 +162,6 @@ function EndOfMatchWinner(KFPlayerController winnerController)
 	GotoState('MatchEnded');
 }
 
-function SetWonGameCamera()
-{
-	local KFPlayerController KFPC;
-
-	foreach WorldInfo.AllControllers( class'KFPlayerController', KFPC )
-	{
-		KFPC.ServerCamera( 'ThirdPerson' );
-		if(lastWinner != none && lastWinner.Pawn != none && KFPC != lastWinner)
-			KFPC.ClientSetViewTarget(lastWinner.Pawn);
-	}
-}
-
 /*********************************************************************************************
  * state MatchEnded
  *********************************************************************************************/
@@ -197,32 +205,16 @@ function SetWonGameCamera()
 	}
  }
 
-//Get Top voted map
-function string GetNextMap()
+function SetWonGameCamera()
 {
-	local KFGameReplicationInfo KFGRI;
-	local int NextMapIndex;
+	local KFPlayerController KFPC;
 
-	KFGRI = KFGameReplicationInfo(WorldInfo.GRI);
-	if( KFGRI != none )
+	foreach WorldInfo.AllControllers( class'KFPlayerController', KFPC )
 	{
-		NextMapIndex = KFGRI.VoteCollector.GetNextMap();
+		KFPC.ServerCamera( 'ThirdPerson' );
+		if(lastWinner != none && lastWinner.Pawn != none && KFPC != lastWinner)
+			KFPC.ClientSetViewTarget(lastWinner.Pawn);
 	}
-
-	if( NextMapIndex != INDEX_NONE )
-	{
-		if(WorldInfo.NetMode == NM_Standalone)
-		{
-			return KFGRI.VoteCollector.Maplist[NextMapIndex];
-		}
-		else
-		{
-			return GameMapCycles[ActiveMapCycle].Maps[NextMapIndex];
-		}
-
-	}
-
-	return super.GetNextMap();
 }
 
 function ShowPostGameMenu()
@@ -253,14 +245,24 @@ static function SendMapOptionsAndOpenAARMenu()
 	local KFPlayerReplicationInfo KFPRI;
 	local KFGameInfo KFGI;
 	local int i;
+	local KFGameReplicationInfo KFGRI;
 
 	WI = Class'WorldInfo'.Static.GetWorldInfo();
 
 	KFGI = KFGameInfo(WI.Game);
+	KFGRI = KFGameReplicationInfo(WI.GRI);
 
 	foreach WI.AllControllers(class'KFPlayerController', KFPC)
 	{
-		if(WI.NetMode != NM_StandAlone)
+		if(WI.NetMode == NM_StandAlone)
+		{
+			//set map list in vote collector
+			if(KFGRI != none && KFGRI.VoteCollector != none)
+			{
+				class'KFGfxMenu_StartGame'.static.GetMapList(KFGRI.VoteCollector.MapList);
+			}
+		}
+		else
 		{
 			KFPRI = KFPlayerReplicationInfo(KFPC.PlayerReplicationInfo);
 			for (i = 0; i < KFGI.GameMapCycles[KFGI.ActiveMapCycle].Maps.length; i++)
@@ -283,6 +285,34 @@ function float GetEndOfMatchTime()
 function ProcessAwards()
 {
 	class'EphemeralMatchStats'.Static.ProcessPostGameStats();
+}
+
+//Get Top voted map
+function string GetNextMap()
+{
+	local KFGameReplicationInfo KFGRI;
+	local int NextMapIndex;
+
+	KFGRI = KFGameReplicationInfo(WorldInfo.GRI);
+	if( KFGRI != none )
+	{
+		NextMapIndex = KFGRI.VoteCollector.GetNextMap();
+	}
+
+	if( NextMapIndex != INDEX_NONE )
+	{
+		if(WorldInfo.NetMode == NM_Standalone)
+		{
+			return KFGRI.VoteCollector.Maplist[NextMapIndex];
+		}
+		else
+		{
+			return GameMapCycles[ActiveMapCycle].Maps[NextMapIndex];
+		}
+
+	}
+
+	return super.GetNextMap();
 }
 
 function UpdateCurrentMapVoteTime(byte NewTime, optional bool bStartTime)
@@ -399,12 +429,8 @@ DefaultProperties
 
 	//bWaitingToStartMatch=false
 	//bDelayedStart=false
-
 	bTeamGame=false
 	bCanPerkAlwaysChange=false
 	LastTopScore=0
 	MaxPlayersAllowed=32
-	//warmupTime=20.f
-	//bWarmupRound=false
-	//GameName = "Deathmatch"
 }

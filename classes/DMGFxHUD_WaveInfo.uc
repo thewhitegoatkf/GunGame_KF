@@ -2,6 +2,8 @@ class DMGFxHUD_WaveInfo extends KFGFxHUD_WaveInfo;
 
 const DEF_WaveText = "Top Kills:";
 
+var DMPlayerController DMPC;
+
 function InitializeHUD()
 {
     // waveText currentWave/maxWaves
@@ -10,6 +12,7 @@ function InitializeHUD()
     SetString("waitingForWaveStart", "----");
    	
     KFPC = KFPlayerController(GetPC());
+    DMPC = DMPlayerController(KFPC);
 }
 
 function TickHud(float DeltaTime)
@@ -20,9 +23,7 @@ function TickHud(float DeltaTime)
     }
     else
     {
-    	SetString("waitingForWaveStart", String(KFPC.PlayerReplicationInfo.Kills));//$"/"$KFGRI.GoalScore);
-     	SetInt("currentWave" , DMGameReplicationInfo(KFGRI).GetTopScore()); 
-   		SetInt("maxWaves" , KFGRI.GoalScore);
+        DMPC.OnTick_WaveInfo(Self, DeltaTime);
     }
 	if (ObjectiveContainer != none)
 	{

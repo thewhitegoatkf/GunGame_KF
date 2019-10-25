@@ -14,7 +14,6 @@ var config array <string > GunsList;
 event InitGame( string Options, out string ErrorMessage )
 {
 	Super.InitGame( Options, ErrorMessage );
-	bDisablePickups=true;
 	`log("GunGame game type initialized");
 }
 
@@ -22,8 +21,9 @@ event PreBeginPlay()
 {
 	if(GunsList.length == 0)
 		LoadDefaultsAndSave();
-
+	
 	PreLoadServerGuns();
+	bDisablePickups=true;
 	Super.PreBeginPlay();
 }
 
@@ -137,7 +137,7 @@ function Killed(Controller Killer, Controller KilledPlayer, Pawn KilledPawn, cla
 
 function int GetGGLevel(GGPlayerReplicationInfo GGPRI)
 {
-	return Clamp(GGPRI.GunLevel, 0, LoadedGunsList.length);
+	return Clamp(GGPRI.GunLevel, 0, LoadedGunsList.length-1);
 }
 
 function LevelUp(GGPlayerController GGPC, GGPlayerReplicationInfo GGPRI)
@@ -150,9 +150,14 @@ function LevelUp(GGPlayerController GGPC, GGPlayerReplicationInfo GGPRI)
 		return;
 	
 	ClearInventory(KFP);
-	//KFP.InvManager.DiscardInventory();
+	
 	AddWeapon(KFP, LoadedGunsList[GetGGLevel(GGPRI)].weaponClass);
 	InitWeaponProperties(KFP);
+}
+
+function bool PickupQuery(Pawn Other, class<Inventory> ItemClass, Actor Pickup)
+{
+	return false;
 }
 
 function DiscardInventory( Pawn Other, optional controller Killer )

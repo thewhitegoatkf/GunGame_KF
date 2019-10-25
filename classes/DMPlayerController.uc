@@ -1,6 +1,40 @@
-class DMPlayerController extends KFPlayerController;
+class DMPlayerController extends KFPlayerController
+DependsOn(DMGameReplicationInfo);
 
-var int warmupCountdown;
+var DMGameReplicationInfo DMGRI;
+
+simulated event PreBeginPlay()
+{
+	Super.PreBeginPlay();
+	DMGRI = DMGameReplicationInfo(WorldInfo.GRI);
+}
+
+simulated function OnTick_WaveInfo(DMGFxHUD_WaveInfo waveinfo, float DeltaTime)
+{
+	if(!DMGRI.bMatchHasBegun)
+		return;
+
+	if(DMGRI.IsWarmupRound())
+	{
+		waveinfo.SetString("waveText", "WARMUP");
+		waveinfo.SetString("waitingForWaveStart", String(DMGRI.WarmupTime - int(`TimeSince(DMGRI.WarmupStart))));
+		//waveinfo.SetInt("currentWave" , DMGRI.GetTopScore()); 
+		//waveinfo.SetInt("maxWaves" , DMGRI.GoalScore);
+	}
+	else
+	{
+		TickWaveInfo(waveinfo);
+	}
+}
+
+simulated function TickWaveInfo(DMGFxHUD_WaveInfo waveinfo)
+{
+	waveinfo.SetString("waveText", waveinfo.DEF_WaveText);
+	waveinfo.SetString("waitingForWaveStart", String(PlayerReplicationInfo.Kills));
+	waveinfo.SetInt("currentWave" , DMGRI.GetTopScore()); 
+	waveinfo.SetInt("maxWaves" , DMGRI.GoalScore);
+}
+
 reliable client function ShowRespawnMessage()
 {
 	if(MyGFxHUD != none)
