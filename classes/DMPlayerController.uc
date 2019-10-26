@@ -1,6 +1,8 @@
 class DMPlayerController extends KFPlayerController
 DependsOn(DMGameReplicationInfo);
 
+const DEF_LowHealthEffectUnderHP = 10; //50 is too high when theres no healing 
+
 simulated function OnTick_WaveInfo(DMGFxHUD_WaveInfo waveinfo, float DeltaTime, KFGameReplicationInfo KFGRI)
 {
 	local DMGameReplicationInfo DMGRI;
@@ -53,6 +55,8 @@ DefaultProperties
 {
 	PerkList.Empty()
 	PerkList.Add((PerkClass=class'HumanPerk'))
+
+	LowHealthThreshold=DEF_LowHealthEffectUnderHP;
 
 	InputClass = class'DMPlayerInput'
 }
