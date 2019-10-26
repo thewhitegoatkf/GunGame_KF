@@ -116,7 +116,7 @@ function Killed(Controller Killer, Controller KilledPlayer, Pawn KilledPawn, cla
 		{
 			`log("LevelUp: Player" @ GGPRI.PlayerName @ "To:" @ GGPRI.GunLevel);
 			GGPRI.SetGunLevel(GGPRI.GunLevel+1);
-			if(GGPRI.GunLevel > GoalScore)
+			if(!MyDMGRI.bWarmupRound && GGPRI.GunLevel > GoalScore)
 			{
 				EndOfMatchWinner(GGPC);
 				return;

@@ -1,4 +1,4 @@
-class GGPlayerReplicationInfo extends KFPlayerReplicationInfo;
+class GGPlayerReplicationInfo extends DMPlayerReplicationInfo;
 
 var int GunLevel;
 

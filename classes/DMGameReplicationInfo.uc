@@ -61,6 +61,9 @@ simulated function Reset()
 {
 	Super.Reset();
 	TopScore = 0;
+	WarmupTime = 0;
+	WarmupStart = 0;
+	bWarmupRound = false;
 }
 
 DefaultProperties

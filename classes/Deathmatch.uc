@@ -38,7 +38,7 @@ function StartMatch()
 	LastTopScore = 0;
 	Super.StartMatch();
 
-	if(bEnableWarmup)
+	if(bEnableWarmup && !MyDMGRI.IsWarmupRound())
 		StartWarmupRound();
 }
 
@@ -51,14 +51,29 @@ function StartWarmupRound()
 
 function OnWarmupEnd()
 {
-	MyDMGRI.bWarmupRound = false;
+	local DMPlayerController DMPC;
+
+    foreach WorldInfo.AllControllers(class'DMPlayerController', DMPC)
+	{
+        if(DMPC.Pawn != none && KFPawn_Customization(DMPC.Pawn) == none)
+        {
+            DMPC.Pawn.Destroy();
+            if(DMPC.PlayerReplicationInfo.bReadyToPlay)
+            {
+            	DMPC.ShowPriorityMessage("The Game Has Begun!", "Reach the highest score", 4);
+            }
+        }
+	}
+
 	ResetLevel();
-	//StartHumans();
-	//TODO:Additional fixes needed 
+	StartMatch();
+	MyDMGRI.bWarmupRound = false;
 }
 
 function bool MajorityPlayersReady()
 {
+	if(bEnableWarmup)
+		return true;
 	return AnyPlayerReady();
 }
 
@@ -99,7 +114,7 @@ function Killed(Controller Killer, Controller KilledPlayer, Pawn KilledPawn, cla
 			LastTopScore = KFPRI.Kills;
 			MyDMGRI.TopScore = LastTopScore;
 		}
-		if(KFPRI != none && KFPRI.Kills >= GoalScore)
+		if(!MyDMGRI.bWarmupRound && KFPRI != none && KFPRI.Kills >= GoalScore)
 		{
 			EndOfMatchWinner(KFPC);
 		}
@@ -413,7 +428,6 @@ function float RatePlayerStart(PlayerStart P, byte Team, Controller Player) //LO
 	}
 	return Rating;
 }
-
 /** returns whether the given Controller StartSpot property should be used as the spawn location for its Pawn */
 
 function byte IsMultiplayerGame()
@@ -425,10 +439,9 @@ DefaultProperties
 {
 	PlayerControllerClass=class'DMPlayerController'
 	GameReplicationInfoClass=class'DMGameReplicationInfo'
+	PlayerReplicationInfoClass=class'DMPlayerReplicationInfo'
 	HUDType = class'DMGFxHudWrapper'
 
-	//bWaitingToStartMatch=false
-	//bDelayedStart=false
 	bTeamGame=false
 	bCanPerkAlwaysChange=false
 	LastTopScore=0

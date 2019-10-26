@@ -1,16 +1,12 @@
 class DMPlayerController extends KFPlayerController
 DependsOn(DMGameReplicationInfo);
 
-var DMGameReplicationInfo DMGRI;
-
-simulated event PreBeginPlay()
+simulated function OnTick_WaveInfo(DMGFxHUD_WaveInfo waveinfo, float DeltaTime, KFGameReplicationInfo KFGRI)
 {
-	Super.PreBeginPlay();
-	DMGRI = DMGameReplicationInfo(WorldInfo.GRI);
-}
+	local DMGameReplicationInfo DMGRI;
 
-simulated function OnTick_WaveInfo(DMGFxHUD_WaveInfo waveinfo, float DeltaTime)
-{
+	DMGRI = DMGameReplicationInfo(KFGRI);
+
 	if(!DMGRI.bMatchHasBegun)
 		return;
 
@@ -23,11 +19,11 @@ simulated function OnTick_WaveInfo(DMGFxHUD_WaveInfo waveinfo, float DeltaTime)
 	}
 	else
 	{
-		TickWaveInfo(waveinfo);
+		TickWaveInfo(waveinfo, DMGRI);
 	}
 }
 
-simulated function TickWaveInfo(DMGFxHUD_WaveInfo waveinfo)
+simulated function TickWaveInfo(DMGFxHUD_WaveInfo waveinfo, DMGameReplicationInfo DMGRI)
 {
 	waveinfo.SetString("waveText", waveinfo.DEF_WaveText);
 	waveinfo.SetString("waitingForWaveStart", String(PlayerReplicationInfo.Kills));

@@ -23,7 +23,7 @@ function TickHud(float DeltaTime)
     }
     else
     {
-        DMPC.OnTick_WaveInfo(Self, DeltaTime);
+        DMPC.OnTick_WaveInfo(Self, DeltaTime, KFGRI);
     }
 	if (ObjectiveContainer != none)
 	{
