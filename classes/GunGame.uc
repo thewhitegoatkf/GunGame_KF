@@ -126,6 +126,7 @@ function Killed(Controller Killer, Controller KilledPlayer, Pawn KilledPawn, cla
 			{
 				LastTopScore = GGPRI.GunLevel;
 				MyDMGRI.TopScore = LastTopScore;
+				UpdateGameSettings();
 			}
 			LevelUp(GGPC, GGPRI);
 		}

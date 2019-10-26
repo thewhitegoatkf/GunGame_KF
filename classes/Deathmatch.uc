@@ -24,6 +24,7 @@ event PreBeginPlay()
 	MyDMGRI = DMGameReplicationInfo(WorldInfo.GRI);
 	MyDMGRI.WarmupTime = WarmupTime;
 	SetGoalScore(GoalScore <= 0 ? DEF_GOALSCORE : GoalScore);
+	UpdateGameSettings();
 }
 
 event PostBeginPlay()
@@ -113,6 +114,7 @@ function Killed(Controller Killer, Controller KilledPlayer, Pawn KilledPawn, cla
 		{
 			LastTopScore = KFPRI.Kills;
 			MyDMGRI.TopScore = LastTopScore;
+			UpdateGameSettings();
 		}
 		if(!MyDMGRI.bWarmupRound && KFPRI != none && KFPRI.Kills >= GoalScore)
 		{
@@ -433,6 +435,107 @@ function float RatePlayerStart(PlayerStart P, byte Team, Controller Player) //LO
 function byte IsMultiplayerGame()
 {
 	return (WorldInfo.NetMode != NM_Standalone && GetNumPlayers()  > 1) ? 1 : 0;
+}
+
+function UpdateGameSettings()
+{
+	local name SessionName;
+	local KFOnlineGameSettings KFGameSettings;
+	local int NumHumanPlayers, i;
+	local KFGameEngine KFEngine;
+
+	if (WorldInfo.NetMode == NM_DedicatedServer || WorldInfo.NetMode == NM_ListenServer)
+	{
+		`REMOVEMESOON_ServerTakeoverLog("KFGameInfo_Survival.UpdateGameSettings 1 - GameInterface: "$GameInterface);
+		if (GameInterface != None)
+		{
+			KFEngine = KFGameEngine(class'Engine'.static.GetEngine());
+
+			SessionName = PlayerReplicationInfoClass.default.SessionName;
+
+			if( PlayfabInter != none && PlayfabInter.GetGameSettings() != none )
+			{
+				KFGameSettings = KFOnlineGameSettings(PlayfabInter.GetGameSettings());
+				KFGameSettings.bAvailableForTakeover = KFEngine.bAvailableForTakeover;
+			}
+			else
+			{
+				KFGameSettings = KFOnlineGameSettings(GameInterface.GetGameSettings(SessionName));
+			}
+			//Ensure bug-for-bug compatibility with KF1
+
+			`REMOVEMESOON_ServerTakeoverLog("KFGameInfo_Survival.UpdateGameSettings 2 - KFGameSettings: "$KFGameSettings);
+
+			if (KFGameSettings != None)
+			{
+				`REMOVEMESOON_ServerTakeoverLog("KFGameInfo_Survival.UpdateGameSettings 3 - KFGameSettings.bAvailableForTakeover: "$KFGameSettings.bAvailableForTakeover);
+
+				KFGameSettings.Mode = GetGameModeNum();
+				KFGameSettings.Difficulty = GameDifficulty;
+				
+				if(MyDMGRI != none)
+				{
+					if (!MyDMGRI.bMatchHasBegun || MyDMGRI.bWarmupRound)
+					{
+						KFGameSettings.bInProgress = false;
+						KFGameSettings.CurrentWave = 0;
+					}
+					else
+					{
+						KFGameSettings.bInProgress = true;
+						KFGameSettings.CurrentWave = MyDMGRI.TopScore;
+					}
+
+					KFGameSettings.NumWaves = MyDMGRI.GoalScore;
+					MyDMGRI.bCustom = bIsCustomGame;
+				}
+				else
+					KFGameSettings.NumWaves = GoalScore;
+
+				KFGameSettings.OwningPlayerName = class'GameReplicationInfo'.default.ServerName;
+
+				KFGameSettings.NumPublicConnections = MaxPlayersAllowed;
+				KFGameSettings.bRequiresPassword = RequiresPassword();
+				KFGameSettings.bCustom = bIsCustomGame;
+				KFGameSettings.bUsesStats = !IsUnrankedGame();
+				KFGameSettings.NumSpectators = NumSpectators;
+
+				// Set the map name
+				if( WorldInfo.IsConsoleDedicatedServer() )
+				{
+					KFGameSettings.MapName = WorldInfo.GetMapName(true);
+					if( GameReplicationInfo != none )
+					{
+						for( i = 0; i < GameReplicationInfo.PRIArray.Length; i++ )
+						{
+							if( !GameReplicationInfo.PRIArray[i].bBot )
+							{
+								NumHumanPlayers++;
+							}
+						}
+					}
+
+					KFGameSettings.NumOpenPublicConnections = KFGameSettings.NumPublicConnections - NumHumanPlayers;
+				}
+
+				`REMOVEMESOON_ServerTakeoverLog("KFGameInfo_Survival.UpdateGameSettings 4 - PlayfabInter: "$PlayfabInter);
+				if (PlayfabInter != none)
+				{
+					`REMOVEMESOON_ServerTakeoverLog("KFGameInfo_Survival.UpdateGameSettings 4.1 - IsRegisteredWithPlayfab: "$PlayfabInter.IsRegisteredWithPlayfab());
+				}
+
+				if( PlayfabInter != none && PlayfabInter.IsRegisteredWithPlayfab() )
+				{
+					PlayfabInter.ServerUpdateOnlineGame();
+				}
+				else
+				{
+					//Trigger re-broadcast of game settings
+					GameInterface.UpdateOnlineGame(SessionName, KFGameSettings, true);
+				}
+			}
+		}
+	}
 }
 
 DefaultProperties
