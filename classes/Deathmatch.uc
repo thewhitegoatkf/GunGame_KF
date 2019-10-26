@@ -543,6 +543,7 @@ DefaultProperties
 	PlayerControllerClass=class'DMPlayerController'
 	GameReplicationInfoClass=class'DMGameReplicationInfo'
 	PlayerReplicationInfoClass=class'DMPlayerReplicationInfo'
+	DefaultPawnClass=class'DMPawn_Human'
 	HUDType = class'DMGFxHudWrapper'
 
 	bTeamGame=false
