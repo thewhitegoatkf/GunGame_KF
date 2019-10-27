@@ -91,34 +91,27 @@ function LoadDefaultsAndSave()
 	SaveConfig();
 }
 
-function Killed(Controller Killer, Controller KilledPlayer, Pawn KilledPawn, class<DamageType> damageType)
+function ScorePlayerKill(DMPlayerController Killer, DMPlayerController KilledPlayer, Pawn KilledPawn, class<DamageType> damageType)
 {
-	local GGPlayerController GGPC,GGPCK;
 	local GGPlayerReplicationInfo GGPRI;
 	local class<KFDamageType> KFDT;
     local class<KFWeaponDefinition> KFWD; 
-    local sInterGunsList GGLIST;
-	
-	GGPC = GGPlayerController(Killer);
-	GGPCK = GGPlayerController(KilledPlayer);
+    
 	GGPRI = GGPlayerReplicationInfo(Killer.PlayerReplicationInfo);
-	Super(KFGameInfo).Killed(Killer,KilledPlayer,KilledPawn,damageType);
 
 	KFDT = class<KFDamageType>(damageType);
 	if(KFDT != none)
 		KFWD = KFDT.Default.WeaponDef;
 
-	if(GGPRI != none && GGPC != none && GGPC != GGPCK && KFWD != none)
+	if(GGPRI != none && Killer != none && Killer != KilledPlayer && KFWD != none)
 	{
-		GGLIST = LoadedGunsList[GetGGLevel(GGPRI)];
-		if((KFWD.Default.WeaponClassPath == GGLIST.classPath) || //check if killed by level weapon
-		(GGLIST.weaponSingleClassPath != "" && GGLIST.weaponSingleClassPath == KFWD.Default.WeaponClassPath)) //check if it was dual weapon
+		if(IsCorrectLevelKill(GetGGLevel(GGPRI), KFWD))
 		{
 			`log("LevelUp: Player" @ GGPRI.PlayerName @ "To:" @ GGPRI.GunLevel);
 			GGPRI.SetGunLevel(GGPRI.GunLevel+1);
 			if(!MyDMGRI.bWarmupRound && GGPRI.GunLevel > GoalScore)
 			{
-				EndOfMatchWinner(GGPC);
+				EndOfMatchWinner(Killer);
 				return;
 			}
 
@@ -128,12 +121,21 @@ function Killed(Controller Killer, Controller KilledPlayer, Pawn KilledPawn, cla
 				MyDMGRI.TopScore = LastTopScore;
 				UpdateGameSettings();
 			}
-			LevelUp(GGPC, GGPRI);
+			LevelUp(Killer, GGPRI);
 		}
 	}
 	
-	if(GGPCK != none && GGPCK.CanRestartPlayer())
-		GGPCK.ShowRespawnMessage();
+}
+
+function bool IsCorrectLevelKill(int GunLevel, class<KFWeaponDefinition> KFWD)
+{
+	local sInterGunsList GGLIST;
+
+	GGLIST = LoadedGunsList[GunLevel];
+	if((KFWD.Default.WeaponClassPath == GGLIST.classPath) || //check if killed by level weapon
+	(GGLIST.weaponSingleClassPath != "" && GGLIST.weaponSingleClassPath == KFWD.Default.WeaponClassPath)) //check if it was dual weapon
+		return true;
+	return false;
 }
 
 function int GetGGLevel(GGPlayerReplicationInfo GGPRI)
@@ -141,11 +143,11 @@ function int GetGGLevel(GGPlayerReplicationInfo GGPRI)
 	return Clamp(GGPRI.GunLevel, 0, LoadedGunsList.length-1);
 }
 
-function LevelUp(GGPlayerController GGPC, GGPlayerReplicationInfo GGPRI)
+function LevelUp(Controller Player, GGPlayerReplicationInfo GGPRI)
 {
 	local KFPawn KFP;
 	
-	KFP = KFPawn(GGPC.Pawn);
+	KFP = KFPawn(Player.Pawn);
 
 	if(KFP == none || !KFP.IsAliveAndWell())
 		return;

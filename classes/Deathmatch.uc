@@ -99,17 +99,26 @@ function BroadcastDeathMessage(Controller Killer, Controller Other, class<Damage
 
 function Killed(Controller Killer, Controller KilledPlayer, Pawn KilledPawn, class<DamageType> damageType)
 {
-	local KFPlayerController KFPC,KFPCK;
-	local KFPlayerReplicationInfo KFPRI;
-	local DMPlayerController DMPCK;
+	local DMPlayerController DMPCK, DMPC;
 
 	Super.Killed(Killer,KilledPlayer,KilledPawn,damageType);
 	
-	KFPC = KFPlayerController(Killer);
-	KFPCK = KFPlayerController(KilledPlayer);
-	KFPRI = KFPlayerReplicationInfo(Killer.PlayerReplicationInfo);
+	DMPC = DMPlayerController(Killer);
+	DMPCK = DMPlayerController(KilledPlayer);
 
-	if(KFPRI != none && KFPC != none && KFPC != KFPCK)
+	if(DMPC != none && DMPCK != none)
+		ScorePlayerKill(DMPC, DMPCK, KilledPawn, damageType);
+
+	if(DMPCK != none && DMPCK.CanRestartPlayer())
+		DMPCK.ShowRespawnMessage();
+}
+
+function ScorePlayerKill(DMPlayerController Killer, DMPlayerController KilledPlayer, Pawn KilledPawn, class<DamageType> damageType)
+{
+	local KFPlayerReplicationInfo KFPRI;
+
+	KFPRI = KFPlayerReplicationInfo(Killer.PlayerReplicationInfo);
+	if(KFPRI != none && Killer != none && Killer != KilledPlayer)
 	{
 		if(LastTopScore < KFPRI.Kills)
 		{
@@ -119,16 +128,7 @@ function Killed(Controller Killer, Controller KilledPlayer, Pawn KilledPawn, cla
 		}
 		if(!MyDMGRI.bWarmupRound && KFPRI != none && KFPRI.Kills >= GoalScore)
 		{
-			EndOfMatchWinner(KFPC);
-		}
-	}
-	
-	if(KFPCK != none && KFPCK.CanRestartPlayer())
-	{
-		DMPCK = DMPlayerController(KFPCK);
-		if(DMPCK != none )
-		{
-			DMPCK.ShowRespawnMessage();
+			EndOfMatchWinner(Killer);
 		}
 	}
 }
