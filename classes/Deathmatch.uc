@@ -67,6 +67,7 @@ function OnWarmupEnd()
 	}
 
 	ResetLevel();
+	MyDMGRI.bWarmupRound = true; //ResetLevel shenanigans
 	StartMatch();
 	MyDMGRI.bWarmupRound = false;
 }

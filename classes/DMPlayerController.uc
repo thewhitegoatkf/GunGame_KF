@@ -1,23 +1,20 @@
-class DMPlayerController extends KFPlayerController
-DependsOn(DMGameReplicationInfo);
+class DMPlayerController extends KFPlayerController;
 
 const DEF_LowHealthEffectUnderHP = 10; //50 is too high when theres no healing 
 
-simulated function OnTick_WaveInfo(DMGFxHUD_WaveInfo waveinfo, float DeltaTime, KFGameReplicationInfo KFGRI)
+simulated function OnTick_WaveInfo(DMGFxHUD_WaveInfo waveinfo, float DeltaTime, DMGameReplicationInfo DMGRI)
 {
-	local DMGameReplicationInfo DMGRI;
-
-	DMGRI = DMGameReplicationInfo(KFGRI);
+	local int TimeRemaining;
 
 	if(!DMGRI.bMatchHasBegun)
 		return;
 
 	if(DMGRI.IsWarmupRound())
 	{
-		waveinfo.SetString("waveText", "WARMUP");
-		waveinfo.SetString("waitingForWaveStart", String(DMGRI.WarmupTime - int(`TimeSince(DMGRI.WarmupStart))));
-		//waveinfo.SetInt("currentWave" , DMGRI.GetTopScore()); 
-		//waveinfo.SetInt("maxWaves" , DMGRI.GoalScore);
+		TimeRemaining = DMGRI.WarmupTime - int(`TimeSince(DMGRI.WarmupStart));
+		
+		waveinfo.UpdateText(waveinfo.DEF_TextWarmupID, waveinfo.DEF_TextWarmup);
+		waveinfo.UpdateTimeRemaining(TimeRemaining);
 	}
 	else
 	{
@@ -27,10 +24,14 @@ simulated function OnTick_WaveInfo(DMGFxHUD_WaveInfo waveinfo, float DeltaTime, 
 
 simulated function TickWaveInfo(DMGFxHUD_WaveInfo waveinfo, DMGameReplicationInfo DMGRI)
 {
-	waveinfo.SetString("waveText", waveinfo.DEF_WaveText);
-	waveinfo.SetString("waitingForWaveStart", String(PlayerReplicationInfo.Kills));
-	waveinfo.SetInt("currentWave" , DMGRI.GetTopScore()); 
-	waveinfo.SetInt("maxWaves" , DMGRI.GoalScore);
+	waveinfo.UpdateText(waveinfo.DEF_TextID, waveinfo.DEF_Text);
+	waveinfo.UpdateScore(PlayerReplicationInfo.Kills);
+	waveInfo.UpdateTopScore(DMGRI.GetTopScore());
+	waveInfo.UpdateGoalScore(DMGRI.GoalScore);
+	//waveinfo.SetString("waveText", waveinfo.DEF_WaveText);
+	//waveinfo.SetString("waitingForWaveStart", String(PlayerReplicationInfo.Kills));
+	//waveinfo.SetInt("currentWave" , DMGRI.GetTopScore()); 
+	//waveinfo.SetInt("maxWaves" , DMGRI.GoalScore);
 }
 
 reliable client function ShowRespawnMessage()

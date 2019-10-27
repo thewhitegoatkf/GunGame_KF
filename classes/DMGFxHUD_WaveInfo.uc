@@ -1,37 +1,102 @@
 class DMGFxHUD_WaveInfo extends KFGFxHUD_WaveInfo;
 
-const DEF_WaveText = "Top Kills:";
+
+var int LastGoalScore;
+var int LastScore;
+var int LastTopScore;
+var int LastTimeRemaining;
+var int LastTextID;
+
+const DEF_Text = "Top Kills:";
+const DEF_TextWarmup = "WARMUP";
+
+const DEF_TextID = 0;
+const DEF_TextWarmupID = 1;
+
+const DEF_CountdownSoundSec = 5;
 
 var DMPlayerController DMPC;
+var DMGameReplicationInfo DMGRI;
 
 function InitializeHUD()
 {
     // waveText currentWave/maxWaves
     //    waitingForWaveStart
-	SetString("waveText", DEF_WaveText);
+	SetString("waveText", DEF_Text);
     SetString("waitingForWaveStart", "----");
    	
-    KFPC = KFPlayerController(GetPC());
-    DMPC = DMPlayerController(KFPC);
+    DMPC = DMPlayerController(GetPC());
 }
 
 function TickHud(float DeltaTime)
 {
-    if(KFGRI == none)
+    if(DMGRI == none)
     {
-        KFGRI = KFGameReplicationInfo(GetPC().WorldInfo.GRI);
+        DMGRI = DMGameReplicationInfo(GetPC().WorldInfo.GRI);
     }
     else
     {
-        DMPC.OnTick_WaveInfo(Self, DeltaTime, KFGRI);
+        DMPC.OnTick_WaveInfo(Self, DeltaTime, DMGRI);
     }
-	if (ObjectiveContainer != none)
-	{
-		ObjectiveContainer.TickHud(DeltaTime);
-	}
 }
 
+function UpdateGoalScore(int GoalScore)
+{
+    if(GoalScore != LastGoalScore)
+    {
+        SetInt("maxWaves" , GoalScore);
+        LastGoalScore = GoalScore;
+    }
+}
+
+function UpdateScore(int Score)
+{
+    if(Score != LastScore)
+    {
+        SetString("waitingForWaveStart", String(Score));
+        LastScore = Score;
+    }
+}
+
+function UpdateTopScore(int TopScore)
+{
+    if(TopScore != LastTopScore)
+    {
+        SetInt("currentWave" , TopScore);
+        LastTopScore = TopScore;
+    }
+}
+
+function UpdateTimeRemaining(int TimeRemaining)
+{
+    if(TimeRemaining != LastTimeRemaining)
+    {
+        SetInt("remainingTraderTime" , TimeRemaining);
+        LastTimeRemaining = TimeRemaining;
+        if (LastTimeRemaining < DEF_CountdownSoundSec && LastTimeRemaining >= 0)
+        {
+            if (DMPC != none && DMPC.MyGFxHUD != none)
+            {
+                DMPC.MyGFxHUD.PlaySoundFromTheme('TraderTime_Countdown', 'UI');
+            }
+        }
+    }
+}
+
+function UpdateText(int TextID, string text)
+{
+    if(TextID != LastTextID)//string compare would be more expansive with no benefit 
+    {
+        SetString("waveText", text);
+        LastTextID = TextID;
+    }
+}
 
 DefaultProperties
 {
+    LastGoalScore=-1
+    LastScore=-1
+    LastTopScore=-1
+    LastTimeRemaining=-1
+    LastTextID=-1
 }
